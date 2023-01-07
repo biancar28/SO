@@ -8,6 +8,7 @@
 
 int main(int argc, char* argv[])
 {
+//Schimbare
 
 	if(argc<2){
 		
