@@ -1,0 +1,116 @@
+#include <unistd.h>
+#include <stdio.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <errno.h>
+#include <stdlib.h> 
+
+
+int main(int argc, char* argv[])
+{
+	if(argc<2){
+		return -1;
+	}
+	
+	int offset = 4096;
+	int SHM_SIZE = argc * offset;
+	
+	const char* shm_name = "sharedfile";
+	
+	int shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+	
+	if(shm_fd < 0){
+		perror("Problem with shm_open");
+		return errno;
+	}
+	
+	
+	if(ftruncate(shm_fd, SHM_SIZE) == -1){
+	
+		perror("Problem with ftruncate");
+		shm_unlink(shm_name);
+		return errno;
+	}
+	
+	
+	pid_t pid;
+	int n;
+	
+	printf("Starting parent %d\n", getpid());
+	
+	for(int i = 0; i<argc-1; i++){
+	
+		pid = fork();
+		
+		if(pid<0){
+		
+			perror("Problem with fork");
+			return errno;
+		}
+		else if(pid == 0){
+		
+			char* shm_ptr_child = mmap(NULL, SHM_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, shm_fd, i*offset);
+			
+			if(shm_ptr_child == MAP_FAILED){
+		
+				perror("Problem with mmap with shm_ptr_child");
+				shm_unlink(shm_name);
+				return errno;
+			}
+			
+			n = atoi(argv[i+1]);
+			shm_ptr_child += sprintf(shm_ptr_child, "%d: ", n);
+	
+			while(n > 1){
+			
+				shm_ptr_child +=sprintf(shm_ptr_child , "%d ", n);
+				if(n%2 == 0){
+					n = n/2;
+				}
+				else{
+					n = 3*n + 1;
+				}
+
+			}
+			shm_ptr_child += sprintf(shm_ptr_child, "1.\n");
+			
+			printf("Done Parent %d Me %d\n", getppid(), getpid());
+			munmap(shm_ptr_child, SHM_SIZE);
+			
+			break;
+		}
+	
+	}
+	
+	if(pid > 0){
+
+		for(int i = 1; i<argc; i++){
+			wait(NULL);
+		}
+		
+		
+		for(int i = 0; i<argc - 1; i++){
+		
+			char* shm_ptr = mmap(NULL, SHM_SIZE, PROT_READ, MAP_SHARED, shm_fd, i*offset);
+	
+			if(shm_ptr == MAP_FAILED){
+			
+				perror("Problem with mmap with shm_ptr");
+				shm_unlink(shm_name);
+				
+				return errno;
+			}
+			printf("%s", shm_ptr);
+			munmap(shm_ptr, SHM_SIZE);
+		}
+		
+		unlink(shm_name);
+	}
+	
+
+
+	return 0;
+} 

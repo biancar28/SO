@@ -1,0 +1,10 @@
+#include <stdio.h>
+#include <unistd.h>
+
+int main()
+{
+	char* str = "Hello, World!\n";
+	write(STDOUT_FILENO, str, 15);
+	return 0;
+
+}

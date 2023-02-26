@@ -1,0 +1,97 @@
+#include <stdio.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <semaphore.h>
+
+#define NTHREAD 10
+pthread_mutex_t mtx;
+sem_t sem;
+int brr;
+
+void barrier_point (){
+
+	pthread_mutex_lock(&mtx);
+	brr--;
+	if(brr == 0){
+	
+		pthread_mutex_unlock(&mtx);
+		if ( sem_post (& sem )) {
+			perror ("problem with sem_post");
+		}
+		return;
+	}
+	pthread_mutex_unlock(&mtx);
+	if ( sem_wait (& sem )) {//blocheaza
+		perror ("problem with sem_wait");
+	}
+	if ( sem_post (& sem )) {
+		perror ("problem with sem_post");
+	}
+
+
+}
+
+
+void* thread_routine(void* arg){
+
+	int nr = *(int*) arg;
+	
+	printf ("% d reached the barrier \n " , nr );
+	barrier_point ();
+	printf ("% d passed the barrier \n " , nr );
+
+
+	return NULL;
+	
+}
+
+int main(){
+
+	pthread_t thread[NTHREAD];
+	int arg[NTHREAD];
+	int sem_val = 0;
+	brr = NTHREAD;
+	
+	if (sem_init (&sem , 0 , sem_val)) {
+		perror ( NULL );
+		return errno ;
+	}
+	
+	if (pthread_mutex_init (&mtx , NULL)){
+	
+		perror("problem with pthread_mutex_init");
+		return errno;
+	}
+
+	for(int i = 0; i< NTHREAD; i++){
+		
+		arg[i] = i;
+		if (pthread_create(&thread[i], NULL, thread_routine, &arg[i])) {
+		
+			perror ("problem with pthread_create");
+			return errno ;
+		}
+	}
+	for(int i = 0; i< NTHREAD; i++){
+	
+		if (pthread_join(thread[i], NULL)) {
+			perror ("problem with pthread_join");
+			return errno ;
+		}
+	}
+	if(pthread_mutex_destroy(&mtx)){
+        	perror("problem with pthread_mutex_destroy\n");
+        	return errno;
+    	}
+    	
+    	if(sem_destroy(&sem)){
+    	
+        	perror("problem with sem_destroy\n");
+        	return errno;
+    	}
+
+
+	return 0;
+}

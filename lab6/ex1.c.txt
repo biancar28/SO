@@ -1,0 +1,55 @@
+#include <stdio.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <errno.h>
+
+void* thread_routine(void* arg){
+
+	char* arg_char = (char*) arg;
+	int len = 0;
+	
+	while(arg_char[len] != '\0'){
+		len++;
+	}
+	
+	char* rez = (char*)malloc(len*sizeof(char));
+	int index = 0;
+	
+	for(int i = len - 1; i>=0; i--){
+		rez[index] = arg_char[i];
+		index++;
+	}
+	
+	
+	return rez;
+}
+
+int main(int argc, char* argv[]){
+
+	if(argc < 2){
+		perror("Fara argument");
+		return errno;
+	}
+	
+	pthread_t thread;
+	char* arg = argv[1];
+	void* retval;
+	
+	if(pthread_create(&thread, NULL, thread_routine, arg)){
+	
+		perror("Problem with pthread_create");
+		return errno;
+	}
+	
+	if (pthread_join(thread , &retval)) {
+		perror ("Problem with pthread_join");
+		return errno ;
+	}
+	
+	printf("%s\n", (char*)retval);
+	free(retval);
+	
+	return 0;
+
+}

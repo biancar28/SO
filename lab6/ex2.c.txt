@@ -1,0 +1,103 @@
+#include <stdio.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <errno.h>
+
+#define linelen 3
+#define collen 3
+
+int matrix1[linelen][collen] = {
+        {1,2,3},
+        {4,5,6},
+        {7,8,9}
+};
+int matrix2[linelen][collen] = {
+        {1,2,3},
+        {4,5,6},
+        {7,8,9}
+};
+
+int matrixrez[linelen][collen];
+
+struct poz{
+
+	int i;
+	int j;
+};
+
+
+void* thread_routine(void* args){
+	
+	struct poz* poz = args;
+	int i = poz->i;
+	int j = poz->j;
+	free(poz);
+	
+	matrixrez[i][j] = 0;
+	
+	for(int z = 0; z<collen; z++){
+		matrixrez[i][j] += matrix1[i][z] * matrix2[z][j];
+	}
+
+	return NULL;
+}
+
+
+int main(int argc, char* argv[]){
+
+	pthread_t threads[linelen*collen];
+	int index = 0;
+	
+	for(int i = 0; i<linelen; i++){
+	
+		for(int j = 0; j<collen; j++){
+			struct poz* poz  = malloc(sizeof(struct poz));
+			poz->i = i;
+			poz->j = j; 
+			
+			if(pthread_create(&threads[index], NULL, thread_routine, poz)){
+	
+				perror("Problem with pthread_create");
+				return errno;
+			}
+			index++;
+		}
+	}
+	
+	for(int i = 0; i < index; i++){
+	
+		if (pthread_join(threads[i], NULL)) {
+		
+			perror ("Problem with pthread_join");
+			return errno ;
+		}
+	}
+	
+	for(int i = 0; i<linelen; i++){
+		for(int j = 0; j<collen; j++){
+		
+			printf("%d ", matrixrez[i][j]);
+		}
+		printf("\n");
+	}
+	
+
+	return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
