@@ -1,0 +1,3 @@
+# SO
+  - C
+  - in Linux
