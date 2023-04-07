@@ -7,4 +7,6 @@ int main()
 	write(STDOUT_FILENO, str, 15);
 	return 0;
 
+//Comentariu
+
 }
